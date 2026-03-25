@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>彰化醫院輻防表單電子簽名工具 (113.12 第4版)</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/@pdf-lib/fontkit/dist/fontkit.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.6; padding: 20px; max-width: 600px; margin: auto; background-color: #f4f7f6; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { margin-bottom: 5px; text-align:center; color:#0056b3; }
+        h3 { border-left: 5px solid #007bff; padding-left: 10px; margin-top: 20px; }
+        #signature-pad { border: 1px solid #000; background-color: #fff; width: 100%; height: 180px; touch-action: none; margin-top: 5px; }
+        .controls { margin-top: 15px; display: flex; justify-content: space-between; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #save { background-color: #28a745; color: white; }
+        #clear { background-color: #6c757d; color: white; }
+        .input-group { margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #ddd; }
+        select, input[type="text"], input[type="date"] { padding: 8px; font-size: 16px; width: 100%; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; margin-bottom: 10px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; color: #333; }
+        .status-msg { font-size: 12px; color: #d9534f; margin-bottom: 10px; }
+        .hidden { display: none; }
+        .note { font-size: 0.85rem; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>衛生福利部彰化醫院</h2>
+    <h2>輻射工作人員評估認定說明表</h2>
+    <div id="loading-status" class="status-msg">正在載入中文字型資產，請稍候...</div>
+
+    <h3>1. 上傳 PDF 調查表</h3>
+    <input type="file" id="pdf-upload" accept=".pdf" style="width:100%;">
+    <p class="note">※ 受評估人員請上傳空白範本；輻防人員與主管請上傳前一人簽妥的檔案。</p>
+
+    <h3>2. 選擇身分與填寫資料</h3>
+    <div class="input-group">
+        <label>● 您的簽署身分：</label>
+        <select id="user-role" onchange="toggleFields()">
+            <option value="user">受評估人員</option>
+            <option value="rso">輻防人員</option>
+            <option value="boss">單位主管</option>
+        </select>
+
+        <div id="user-info-fields">
+            <label>● 單位名稱：</label>
+            <select id="input-dept">
+                <option value="">請選擇單位...</option>
+                <option value="放射診斷科">放射診斷科</option>
+                <option value="檢查室">檢查室</option>
+                <option value="腫瘤科">腫瘤科</option>
+                <option value="導管室">導管室</option>
+                <option value="碎石室">碎石室</option>
+                <option value="牙科">牙科</option>
+                <option value="麻醉科">麻醉科</option>
+                <option value="開刀房">開刀房</option>
+                <option value="醫療科">醫療科</option>
+            </select>
+            <label>● 職稱：</label>
+            <input type="text" id="input-title" placeholder="例如：醫事放射師">
+            <label>● 姓名：</label>
+            <input type="text" id="input-name" placeholder="請輸入全名">
+            <label>● 員工編號：</label>
+            <input type="text" id="input-empid" placeholder="請輸入員工編號">
+            <label>● 到職日期：</label>
+            <input type="date" id="input-arrival">
+            
+            <label>● 評估類別：</label>
+            <select id="eval-type">
+                <option value="regular">定期評估</option>
+                <option value="new">新進</option>
+                <option value="transfer">轉任</option>
+            </select>
+
+            <label>● 認定意願：</label>
+            <select id="agree-type">
+                <option value="agree">同意列為輻射工作人員</option>
+                <option value="disagree">同意「不列入」輻射工作人員</option>
+            </select>
+        </div>
+
+        <div id="rso-info-fields" class="hidden">
+            <label>● 歷史輻射暴露劑量紀錄：</label>
+            <select id="dose-record">
+                <option value="na">不適用</option>
+                <option value="yes">是 (已提供)</option>
+                <option value="no">否</option>
+            </select>
+        </div>
+    </div>
+
+    <h3>3. 手寫簽名</h3>
+    <canvas id="signature-pad"></canvas>
+    
+    <div class="controls">
+        <button id="clear">清除重簽</button>
+        <button id="save" disabled>產生已簽署 PDF</button>
+    </div>
+</div>
+
+<script>
+    // --- 1. 簽名板初始化 ---
+    const canvas = document.getElementById('signature-pad');
+    const signaturePad = new SignaturePad(canvas);
+
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+        signaturePad.clear();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // --- 2. 字型載入 ---
+    let customFont;
+    async function loadFont() {
+        try {
+            const fontUrl = 'https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf';
+            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            customFont = fontBytes;
+            document.getElementById('loading-status').innerText = "✅ 中文字型載入成功！";
+            document.getElementById('loading-status').style.color = "green";
+            document.getElementById('save').disabled = false;
+        } catch (e) {
+            document.getElementById('loading-status').innerText = "❌ 字型載入失敗，請確認網路連線。";
+        }
+    }
+    loadFont();
+
+    // --- 3. UI 介面切換 ---
+    function toggleFields() {
+        const role = document.getElementById('user-role').value;
+        document.getElementById('user-info-fields').classList.toggle('hidden', role !== 'user');
+        document.getElementById('rso-info-fields').classList.toggle('hidden', role !== 'rso');
+    }
+
+    document.getElementById('clear').addEventListener('click', () => signaturePad.clear());
+
+    // --- 4. 核心 PDF 處理邏輯 ---
+    document.getElementById('save').addEventListener('click', async () => {
+        
+        const role = document.getElementById('user-role').value;
+        const fileInput = document.getElementById('pdf-upload');
+        
+        if (fileInput.files.length === 0) return alert("請上傳 PDF 檔案！");
+        if (signaturePad.isEmpty()) return alert("請完成手寫簽名。");
+
+        if (role === 'user') {
+            const dept = document.getElementById('input-dept').value;
+            const title = document.getElementById('input-title').value.trim();
+            const name = document.getElementById('input-name').value.trim();
+            const empid = document.getElementById('input-empid').value.trim();
+            const arrival = document.getElementById('input-arrival').value;
+
+            if (!dept) return alert("請選擇【單位名稱】！");
+            if (!title) return alert("請輸入【職稱】！");
+            if (!name) return alert("請輸入【姓名】！");
+            if (!empid) return alert("請輸入【員工編號】！");
+            if (!arrival) return alert("請選擇【到職日期】！");
+        }
+
+        const file = fileInput.files[0];
+        const existingPdfBytes = await file.arrayBuffer();
+
+        try {
+            const { PDFDocument, StandardFonts } = PDFLib;
+            const pdfDoc = await PDFDocument.load(existingPdfBytes);
+            const pages = pdfDoc.getPages();
+            const firstPage = pages[0];
+            const signatureImage = await pdfDoc.embedPng(signaturePad.toDataURL('image/png'));
+            
+            if (role === 'user') {
+                pdfDoc.registerFontkit(fontkit);
+                const chineseFont = await pdfDoc.embedFont(customFont, { subset: true });
+                const textSettings = { size: 12, font: chineseFont };
+                const name = document.getElementById('input-name').value.trim();
+                const empid = document.getElementById('input-empid').value.trim();
+                
+                firstPage.drawText(document.getElementById('input-dept').value, { x: 468, y: 810, ...textSettings });
+                firstPage.drawText(document.getElementById('input-title').value, { x: 468, y: 795, ...textSettings });
+                firstPage.drawText(name, { x: 468, y: 780, ...textSettings });
+                firstPage.drawText(empid, { x: 310, y: 100, ...textSettings });
+                
+                const arrivalDate = new Date(document.getElementById('input-arrival').value);
+                const dStr = `${arrivalDate.getFullYear()-1911}      ${arrivalDate.getMonth()+1}      ${arrivalDate.getDate()}`;
+                firstPage.drawText(dStr, { x: 485, y: 765, size: 11, font: chineseFont });
+
+                const evalType = document.getElementById('eval-type').value;
+                let evalX = 255; if (evalType === 'new') evalX = 330; if (evalType === 'transfer') evalX = 380;
+                firstPage.drawText('V', { x: evalX, y: 765, size: 14, font: chineseFont });
+
+                const agreeType = document.getElementById('agree-type').value;
+                let agreey = 140; if (agreeType === 'disagree') agreey = 165; 
+                firstPage.drawText('V', { x: 45, y: agreey, size: 14, font: chineseFont });
+
+                const now = new Date();
+                const dateStr = `${now.getFullYear()-1911}                         ${now.getMonth()+1}                       ${now.getDate()}`;
+                firstPage.drawText(dateStr, { x: 130, y: 40, size: 15, font: chineseFont });
+            } 
+            
+            if (role === 'rso') {
+                const doseRecord = document.getElementById('dose-record').value;
+                const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                let checkX = 0;
+                if (doseRecord === 'yes') checkX = 380;
+                if (doseRecord === 'no') checkX = 412;
+                if (doseRecord === 'na') checkX = 445;
+                if (checkX > 0) {
+                    firstPage.drawText('V', { x: checkX, y: 240, size: 14, font: helveticaFont });
+                }
+            }
+
+            let signy = 90; 
+            if (role === 'rso') signy = 68;
+            if (role === 'boss') signy = 46;
+            firstPage.drawImage(signatureImage, { x: 105, y: signy, width: 80, height: 30 });
+
+            const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            
+            let fileName = "";
+            const originalName = file.name.replace(".pdf", "").replace(".PDF", "");
+
+            if (role === 'user') {
+                const checkName = document.getElementById('input-name').value.trim();
+                fileName = checkName ? `${checkName}_輻防評估表.pdf` : `${originalName}_已簽署.pdf`;
+            } else if (role === 'rso') {
+                fileName = `${originalName}_輻防人員.pdf`;
+            } else if (role === 'boss') {
+                fileName = `${originalName}_主管.pdf`;
+            }
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click(); 
+            
+            if (role === 'user') {
+                const statusConfirm = confirm("PDF 已下載！是否同步上傳並寄送紀錄？");
+                if (statusConfirm) {
+                    const scriptUrl = "https://script.google.com/macros/s/AKfycbyh0kUJ9lSvQKYKzzqJsYBtw1hKj328I4Us382yWpCucNvSwsg1E1JDvwa_RSvy2JvCUQ/exec"; 
+                    document.getElementById('loading-status').innerText = "🚀 正在連線至 Google 雲端...";
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob); 
+                    reader.onloadend = function() {
+                        const base64String = reader.result.split(',')[1];
+                        const payload = {
+                            base64Data: base64String,
+                            fileName: fileName,
+                            userName: document.getElementById('input-name').value.trim(),
+                            userData: {
+                                name: document.getElementById('input-name').value.trim(),
+                                dept: document.getElementById('input-dept').value,
+                                empid: document.getElementById('input-empid').value,
+                                arrivalDate: document.getElementById('input-arrival').value
+                            }
+                        };
+                        fetch(scriptUrl, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
+                        .then(() => {
+                            alert("資料已發送至雲端儲存。");
+                            document.getElementById('loading-status').innerText = "✅ 雲端同步完成";
+                        })
+                        .catch(err => alert("連線錯誤: " + err));
+                    };
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            alert("系統處理失敗：" + err.message);
+        }
+    });
+</script>
+</body>
+</html>
