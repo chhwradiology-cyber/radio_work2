@@ -215,7 +215,7 @@
     
     <div class="controls">
         <button id="clear">清除重簽</button>
-        <button id="save">產生、下載並發送</button>
+        <button id="save">確定簽署</button>
     </div>
 </div>
 
@@ -628,7 +628,7 @@
 
             const arrivalDate = new Date(arrival);
             await embedTextImage(pdfDoc, firstPage,
-                `${arrivalDate.getFullYear()-1911}       ${arrivalDate.getMonth()+1}        ${arrivalDate.getDate()}`,
+                `${arrivalDate.getFullYear()-1911}      ${arrivalDate.getMonth()+1}     ${arrivalDate.getDate()}`,
                 480, 767, 11);
 
             const evalType = document.getElementById('eval-type').value;
@@ -643,7 +643,7 @@
             const now = new Date();
             await embedTextImage(pdfDoc, firstPage,
                 `${now.getFullYear()-1911}                        ${now.getMonth()+1}                  ${now.getDate()}`,
-                130, 40, 15);
+                130, 38, 15);
 
             const sigImg = await pdfDoc.embedPng(signaturePad.toDataURL());
             firstPage.drawImage(sigImg, { x: 105, y: 90, width: 80, height: 30 });
