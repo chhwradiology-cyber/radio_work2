@@ -2,50 +2,169 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>彰化醫院輻防表單電子簽名工具 (113.12 第4版)</title>
+    <title>彰化醫院輻防表單電子簽名工具</title>
+    
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    <script src="https://unpkg.com/@pdf-lib/fontkit/dist/fontkit.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.6; padding: 20px; max-width: 600px; margin: auto; background-color: #f4f7f6; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif; 
+            line-height: 1.6; padding: 15px; max-width: 600px; margin: auto; background-color: #f4f7f6; 
+            touch-action: manipulation;
+        }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { margin-bottom: 5px; text-align:center; color:#0056b3; }
-        h3 { border-left: 5px solid #007bff; padding-left: 10px; margin-top: 20px; }
-        #signature-pad { border: 1px solid #000; background-color: #fff; width: 100%; height: 180px; touch-action: none; margin-top: 5px; }
-        .controls { margin-top: 15px; display: flex; justify-content: space-between; }
-        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        h2 { font-size: 1.3rem; margin-bottom: 5px; text-align:center; color:#0056b3; }
+        h3 { border-left: 5px solid #007bff; padding-left: 10px; margin-top: 20px; font-size: 1.1rem; }
+        .signature-wrapper { position: relative; width: 100%; height: 180px; border: 1px solid #000; background-color: #fff; margin-top: 5px; touch-action: none; }
+        #signature-pad { width: 100%; height: 100%; display: block; }
+        .controls { margin-top: 15px; display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         #save { background-color: #28a745; color: white; }
         #clear { background-color: #6c757d; color: white; }
         .input-group { margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #ddd; }
-        select, input[type="text"], input[type="date"] { padding: 8px; font-size: 16px; width: 100%; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; margin-bottom: 10px; }
+        select, input[type="text"], input[type="date"] { padding: 12px; font-size: 16px; width: 100%; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; margin-bottom: 10px; }
         label { font-weight: bold; display: block; margin-bottom: 5px; color: #333; }
-        .status-msg { font-size: 12px; color: #d9534f; margin-bottom: 10px; }
+        .status-msg { font-size: 13px; color: #d9534f; margin-bottom: 10px; font-weight: bold; }
         .hidden { display: none; }
-        .note { font-size: 0.85rem; color: #666; margin-top: 5px; }
+        #agreement-box { height: 220px; overflow-y: scroll; border: 2px solid #007bff; border-radius: 6px; padding: 12px 15px; font-size: 13.5px; line-height: 1.8; background: #fff; color: #222; }
+        #agreement-box h4 { font-size: 14px; color: #0056b3; margin: 12px 0 4px 0; border-bottom: 1px solid #dde; padding-bottom: 3px; }
+        #agreement-box p { margin: 4px 0 8px 0; }
+        #agreement-box .item { margin-bottom: 6px; }
+        #agreement-hint { font-size: 12px; color: #888; text-align: center; margin-top: 5px; font-style: italic; }
+        #agree-check-wrapper { display: none; margin-top: 10px; background: #eaf4ea; border: 1px solid #28a745; border-radius: 6px; padding: 10px 14px; font-size: 14px; }
+        #agree-check-wrapper input[type="checkbox"] { width: 18px; height: 18px; margin-right: 8px; vertical-align: middle; cursor: pointer; }
+        #agree-check-wrapper label { font-weight: bold; color: #1a6e1a; cursor: pointer; display: inline; }
+        .cloud-file-list { margin-top: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; max-height: 280px; overflow-y: auto; }
+        .cloud-file-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .cloud-file-item:last-child { border-bottom: none; }
+        .cloud-file-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+        .cloud-file-item label { font-weight: normal; margin: 0; cursor: pointer; word-break: break-all; }
+        .cloud-file-dept { font-size: 11px; color: #888; margin-top: 2px; }
+        .cloud-file-empty { padding: 15px; text-align: center; color: #888; font-size: 13px; }
+        .cloud-select-all-wrapper { padding: 8px 12px; background: #f0f4ff; border-bottom: 1px solid #ddd; font-size: 13px; }
+        .cloud-select-all-wrapper label { font-weight: bold; color: #0056b3; }
+        #progress-wrapper { margin-top: 12px; display: none; }
+        #progress-bar-bg { width: 100%; height: 18px; background: #e0e0e0; border-radius: 9px; overflow: hidden; }
+        #progress-bar { height: 100%; width: 0%; background: #28a745; border-radius: 9px; transition: width 0.3s; }
+        #progress-text { font-size: 13px; color: #333; margin-top: 5px; text-align: center; }
+        #result-list { margin-top: 10px; font-size: 13px; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px; background: #f8f9fa; display: none; }
+        #result-list div { padding: 2px 0; }
+        #result-list .ok { color: #28a745; }
+        #result-list .err { color: #d9534f; }
+        #stamp-preview-wrapper { margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        #stamp-preview-wrapper p { font-size: 13px; color: #666; margin: 0; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); color: white; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; text-align: center; padding: 20px; box-sizing: border-box; }
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        #overlay-progress { font-size: 15px; margin-top: 12px; color: #ffc107; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
+<div id="overlay">
+    <div class="spinner"></div>
+    <div style="font-size: 18px; font-weight: bold;">正在處理並同步雲端...</div>
+    <div id="overlay-progress"></div>
+    <div style="font-size: 14px; margin-top: 10px; color: #ffc107;">⚠️ 請勿關閉或離開此網頁 ⚠️</div>
+</div>
+
 <div class="card">
+  <div class="container">
+  <div style="text-align:center; margin-bottom:12px;">
+    <img src="https://lh3.googleusercontent.com/d/1rI42faHfacjBNoA3-mAAb7VMh5WfDH7a" 
+         alt="彰化醫院LOGO" 
+         style="max-width:150px; height:auto;">
+  </div>
     <h2>衛生福利部彰化醫院</h2>
-    <h2>輻射工作人員評估認定說明表</h2>
-    <div id="loading-status" class="status-msg">正在載入中文字型資產，請稍候...</div>
+    <h2>輻射工作人員評估認定表簽署系統</h2>
+    <div id="loading-status" class="status-msg">⏳ 系統載入中，請稍候...</div>
 
-    <h3>1. 上傳 PDF 調查表</h3>
-    <input type="file" id="pdf-upload" accept=".pdf" style="width:100%;">
-    <p class="note">※ 受評估人員請上傳空白範本；輻防人員與主管請上傳前一人簽妥的檔案。</p>
-
-    <h3>2. 選擇身分與填寫資料</h3>
+    <h3>1. 選擇簽署身分</h3>
     <div class="input-group">
         <label>● 您的簽署身分：</label>
-        <select id="user-role" onchange="toggleFields()">
+        <select id="user-role" onchange="toggleFields()" disabled>
             <option value="user">受評估人員</option>
             <option value="rso">輻防人員</option>
             <option value="boss">單位主管</option>
+            <option value="stamp">輻防會核章</option>
         </select>
 
-        <div id="user-info-fields">
+        <div id="boss-dept-fields" class="hidden">
+            <label>● 您的單位：</label>
+            <select id="boss-dept" onchange="loadCloudFileList('boss')">
+                <option value="">請選擇單位...</option>
+                <option value="放射診斷科">放射診斷科</option>
+                <option value="檢查室">檢查室</option>
+                <option value="腫瘤科">腫瘤科</option>
+                <option value="導管室">導管室</option>
+                <option value="碎石室">碎石室</option>
+                <option value="牙科">牙科</option>
+                <option value="麻醉科">麻醉科</option>
+                <option value="開刀房">開刀房</option>
+                <option value="醫療科">醫療科</option>
+            </select>
+        </div>
+
+        <div id="rso-info-fields" class="hidden">
+            <label>● 歷史輻射暴露劑量紀錄：</label>
+            <select id="dose-record">
+                <option value="na">不適用</option>
+                <option value="yes">是 (已提供)</option>
+                <option value="no">否</option>
+            </select>
+        </div>
+
+        <div id="stamp-info-fields" class="hidden">
+            <div id="stamp-preview-wrapper">
+                <p>核章預覽：</p>
+                <canvas id="stamp-preview"></canvas>
+            </div>
+            <p style="font-size:13px; color:#666; margin-top:8px;">※ 核章將蓋於 PDF 右下角，不需要手寫簽名。</p>
+        </div>
+    </div>
+
+    <div id="agreement-section" class="hidden">
+        <h3>2. 請詳閱以下說明內容</h3>
+        <div id="agreement-box">
+            <h4>一、本院輻射工作人員認定基準</h4>
+            <div class="item">1. 輻射工作人員認定基準（93年6月28日會輻字第0930020987號公告），係指從事游離輻射作業之人員，其所受暴露經評估有超過游離輻射安全標準規定劑量限制之虞者。受雇或自雇經常從事輻射作業，並認知會接受暴露之人員；而其所受暴露經輻射安全評估未超過游離輻射安全標準之一般人劑量限度者（即年有效劑量不超過1 mSv，眼球水晶體之等效劑量一年不超過15 mSv，皮膚之等效劑量於一年內不超過50 mSv），得視同一般人員。</div>
+            <div class="item">2. 前項輻射安全評估應由合格輻防偵測業者或輻射防護人員為之，得以放射性物質或可發生游離輻射設備之輻射安全測試報告及歷年使用人員輻射劑量監測記錄推估。</div>
+            <div class="item">3. 輻射工作人員之評估認定後，須經個別工作人員認知並簽署備查。</div>
+            <h4>二、輻射工作人員之權利義務</h4>
+            <div class="item">1. 雇用輻射工作人員前應要求其實施體格檢查；對在職之工作人員應實施定期健康檢查，並依檢查結果為適當處理。</div>
+            <div class="item">2. 應對輻射工作人員實施個別劑量監測並告知結果；自工作人員離職或停止輻射工作起，留存監測記錄30年並至工作人員75歲。經評估對其年暴露量不可能超過有效劑量50mSv，眼球水晶體之等效劑量150 mSv，皮膚及四肢之等效劑量為500mSv者，可以環境監測或個別劑量抽樣監測代之。</div>
+            <div class="item">3. 輻射工作人員每年應接受3小時以上之輻射防護教育訓練。</div>
+            <h4>三、劑量基準</h4>
+            <p>年累積劑量為背景值或低於一毫西弗者，可不列入輻射工作人員。</p>
+            <h4>四、環境監測</h4>
+            <p>輻射防護會除監控上述的人員劑量外，本院會每半年例行性對有輻射儀器設備的單位進行環境檢測，檢測結果提報至輻射防護會討論；若有明顯高於背景值且考慮其曝露時間等因素，立即進行改善並視其嚴重程度停止該設備輻射作業，改善後也需再次偵測以確保人員安全，並提報輻射防護會留存相關紀錄。</p>
+            <h4>五、劑量計與裝具</h4>
+            <p>本院對輻射工作人員提供劑量計、輻射防護裝具及資訊，請愛惜並遵守相關作業規定。因個人因素造成佩章遺失，須負擔成本費用約1,500元。如發生劑量異常案件，須配合完成「輻射工作人員劑量異常案件報告」必要時通報主管機關。</p>
+            <h4>六、不列入輻射工作人員之權益</h4>
+            <p>不列入「輻射工作人員認定基準」之人員，得不需接受每年三小時輻射防護教育訓練、特殊勞工體檢，及個人劑量監測；而在管制區之一般人員以環境監測之劑量代表其曝露劑量。</p>
+            <h4>七、填報說明</h4>
+            <p>填報資料將由輻射防護會再審核。本調查表應於各單位操作人員有異動時，隨時填報認定之，由輻射防護會保存備查。為確保當事人雙方對認定結果有共同認識，每年對受評人員逐一作成書面紀錄並簽屬，雙方各執紀錄留存。院方將留存紀錄備查至少十年。</p>
+            <p style="color:#0056b3; font-weight:bold; margin-top:12px;">📞 輻射防護會連絡電話：04-8298686 分機 1605、1606</p>
+        </div>
+        <div id="agreement-hint">⬇️ 請向下滾動閱讀全部內容後，方可勾選確認</div>
+        <div id="agree-check-wrapper">
+            <input type="checkbox" id="read-confirm">
+            <label for="read-confirm">我已閱讀並了解上述輻射工作人員評估認定說明表內容</label>
+        </div>
+    </div>
+
+    <div id="cloud-file-section" class="hidden">
+        <h3 id="cloud-file-title">2. 選取待簽署檔案</h3>
+        <div id="cloud-file-list" class="cloud-file-list">
+            <div class="cloud-file-empty">載入中...</div>
+        </div>
+    </div>
+
+    <div id="user-info-section" class="hidden">
+        <h3>3. 填寫資料</h3>
+        <div class="input-group">
             <label>● 單位名稱：</label>
             <select id="input-dept">
                 <option value="">請選擇單位...</option>
@@ -67,213 +186,507 @@
             <input type="text" id="input-empid" placeholder="請輸入員工編號">
             <label>● 到職日期：</label>
             <input type="date" id="input-arrival">
-            
             <label>● 評估類別：</label>
             <select id="eval-type">
                 <option value="regular">定期評估</option>
                 <option value="new">新進</option>
                 <option value="transfer">轉任</option>
             </select>
-
             <label>● 認定意願：</label>
             <select id="agree-type">
                 <option value="agree">同意列為輻射工作人員</option>
                 <option value="disagree">同意「不列入」輻射工作人員</option>
             </select>
         </div>
+    </div>
 
-        <div id="rso-info-fields" class="hidden">
-            <label>● 歷史輻射暴露劑量紀錄：</label>
-            <select id="dose-record">
-                <option value="na">不適用</option>
-                <option value="yes">是 (已提供)</option>
-                <option value="no">否</option>
-            </select>
+    <div id="signature-section">
+        <h3 id="sign-title">3. 手寫簽名</h3>
+        <div class="signature-wrapper">
+            <canvas id="signature-pad"></canvas>
         </div>
     </div>
 
-    <h3>3. 手寫簽名</h3>
-    <canvas id="signature-pad"></canvas>
+    <div id="progress-wrapper">
+        <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+        <div id="progress-text"></div>
+    </div>
+    <div id="result-list"></div>
     
     <div class="controls">
         <button id="clear">清除重簽</button>
-        <button id="save" disabled>產生已簽署 PDF</button>
+        <button id="save">產生、下載並發送</button>
     </div>
 </div>
 
 <script>
-    // --- 1. 簽名板初始化 ---
+    // ✅ GAS API 網址（唯一需要修改的設定）
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzu00GR8C22DVMSFDHrfcDdZ0FwrC8srVyFUN_GICE89s0a177VO2Out3r09zcWgUIf6A/exec';
+
+    // ✅ 統一的 API 呼叫函式
+    async function apiGet(params) {
+        const url = GAS_URL + '?' + new URLSearchParams(params).toString();
+        const res  = await fetch(url);
+        return await res.json();
+    }
+
+    async function apiPost(payload) {
+        const res = await fetch(GAS_URL, {
+            method:  'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body:    JSON.stringify(payload)
+        });
+        return await res.json();
+    }
+
     const canvas = document.getElementById('signature-pad');
-    const signaturePad = new SignaturePad(canvas);
+    const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,0)', penColor: 'rgb(0,0,0)' });
+    const overlay = document.getElementById('overlay');
+    let blankPdfBase64 = null;
+    let isProcessing   = false;
+
+    window.addEventListener('beforeunload', e => { if (isProcessing) { e.preventDefault(); e.returnValue = ''; } });
 
     function resizeCanvas() {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        canvas.width = canvas.offsetWidth * ratio;
+        canvas.width  = canvas.offsetWidth  * ratio;
         canvas.height = canvas.offsetHeight * ratio;
-        canvas.getContext("2d").scale(ratio, ratio);
+        canvas.getContext('2d').scale(ratio, ratio);
         signaturePad.clear();
     }
-    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // --- 2. 字型載入 ---
-    let customFont;
-    async function loadFont() {
+    canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchmove',  e => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchend',   e => e.preventDefault(), { passive: false });
+
+    // ✅ 頁面載入：從 GAS API 抓空白 PDF
+    (async () => {
         try {
-            const fontUrl = 'https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf';
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
-            customFont = fontBytes;
-            document.getElementById('loading-status').innerText = "✅ 中文字型載入成功！";
-            document.getElementById('loading-status').style.color = "green";
-            document.getElementById('save').disabled = false;
-        } catch (e) {
-            document.getElementById('loading-status').innerText = "❌ 字型載入失敗，請確認網路連線。";
+            const data = await apiGet({ action: 'getBlankPdf' });
+            if (data.result === 'success') {
+                blankPdfBase64 = data.base64;
+                document.getElementById('loading-status').innerText = '✅ 系統就緒';
+                document.getElementById('loading-status').style.color = 'green';
+                document.getElementById('user-role').disabled = false;
+                toggleFields();
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (err) {
+            document.getElementById('loading-status').innerText = '❌ 表單載入失敗，請重新整理頁面';
+            document.getElementById('loading-status').style.color = '#d9534f';
+        }
+    })();
+
+    document.getElementById('agreement-box').addEventListener('scroll', function () {
+        if (this.scrollHeight - this.scrollTop <= this.clientHeight + 10) {
+            document.getElementById('agree-check-wrapper').style.display = 'block';
+            document.getElementById('agreement-hint').style.display = 'none';
+        }
+    });
+
+    // ✅ 載入雲端待簽檔案清單
+    async function loadCloudFileList(role) {
+        const listEl = document.getElementById('cloud-file-list');
+        listEl.innerHTML = '<div class="cloud-file-empty">⏳ 載入中...</div>';
+        try {
+            let data;
+            if (role === 'rso') {
+                data = await apiGet({ action: 'listForRso' });
+            } else if (role === 'stamp') {
+                data = await apiGet({ action: 'listForStamp' });
+            } else if (role === 'boss') {
+                const dept = document.getElementById('boss-dept').value;
+                if (!dept) { listEl.innerHTML = '<div class="cloud-file-empty">請先選擇單位</div>'; return; }
+                data = await apiGet({ action: 'listForBoss', dept: dept });
+            }
+            renderCloudFileList(data.files || []);
+        } catch (err) {
+            listEl.innerHTML = '<div class="cloud-file-empty">❌ 載入失敗：' + err.message + '</div>';
         }
     }
-    loadFont();
 
-    // --- 3. UI 介面切換 ---
+    function renderCloudFileList(files) {
+        const listEl = document.getElementById('cloud-file-list');
+        if (!files || files.length === 0) {
+            listEl.innerHTML = '<div class="cloud-file-empty">目前沒有待簽署的檔案 ✅</div>';
+            return;
+        }
+        let html = `<div class="cloud-select-all-wrapper">
+            <input type="checkbox" id="cloud-select-all" onchange="toggleSelectAll()">
+            <label for="cloud-select-all">全選（共 ${files.length} 份）</label>
+        </div>`;
+        files.forEach(f => {
+            html += `<div class="cloud-file-item">
+                <input type="checkbox" class="cloud-file-cb" value="${f.id}" data-name="${f.name}" data-dept="${f.dept || ''}">
+                <div>
+                    <div>${f.name}</div>
+                    ${f.dept ? '<div class="cloud-file-dept">📁 ' + f.dept + '</div>' : ''}
+                </div>
+            </div>`;
+        });
+        listEl.innerHTML = html;
+    }
+
+    function toggleSelectAll() {
+        const checked = document.getElementById('cloud-select-all').checked;
+        document.querySelectorAll('.cloud-file-cb').forEach(cb => cb.checked = checked);
+    }
+
     function toggleFields() {
         const role = document.getElementById('user-role').value;
-        document.getElementById('user-info-fields').classList.toggle('hidden', role !== 'user');
+
+        if (role === 'stamp') {
+            const pwd = prompt('請輸入輻防會核章密碼：');
+            if (pwd !== 'C004846') {
+                alert('密碼錯誤，已返回預設身分。');
+                document.getElementById('user-role').value = 'user';
+                toggleFields();
+                return;
+            }
+        }
+
+        document.getElementById('agreement-section').classList.toggle('hidden', role !== 'user');
+        document.getElementById('user-info-section').classList.toggle('hidden', role !== 'user');
         document.getElementById('rso-info-fields').classList.toggle('hidden', role !== 'rso');
+        document.getElementById('boss-dept-fields').classList.toggle('hidden', role !== 'boss');
+        document.getElementById('stamp-info-fields').classList.toggle('hidden', role !== 'stamp');
+        document.getElementById('signature-section').classList.toggle('hidden', role === 'stamp');
+        document.getElementById('clear').classList.toggle('hidden', role === 'stamp');
+
+        const showCloud = (role === 'rso' || role === 'boss' || role === 'stamp');
+        document.getElementById('cloud-file-section').classList.toggle('hidden', !showCloud);
+
+        if (role === 'user') {
+            document.getElementById('sign-title').innerText = '4. 手寫簽名';
+        } else if (role === 'stamp') {
+            document.getElementById('cloud-file-title').innerText = '2. 選取待核章檔案';
+            document.getElementById('sign-title').innerText = '3. 核章確認';
+        } else {
+            document.getElementById('cloud-file-title').innerText = '2. 選取待簽署檔案';
+            document.getElementById('sign-title').innerText = '3. 手寫簽名';
+        }
+
+        document.getElementById('progress-wrapper').style.display = 'none';
+        document.getElementById('result-list').style.display = 'none';
+        document.getElementById('result-list').innerHTML = '';
+
+        if (role === 'user') {
+            document.getElementById('read-confirm').checked = false;
+            document.getElementById('agree-check-wrapper').style.display = 'none';
+            document.getElementById('agreement-hint').style.display = 'block';
+            document.getElementById('agreement-box').scrollTop = 0;
+        }
+
+        if (role === 'rso' || role === 'stamp') loadCloudFileList(role);
+        else if (role === 'boss') {
+            document.getElementById('boss-dept').value = '';
+            document.getElementById('cloud-file-list').innerHTML = '<div class="cloud-file-empty">請先選擇單位</div>';
+        }
+
+        if (role === 'stamp') renderStampPreview();
     }
 
     document.getElementById('clear').addEventListener('click', () => signaturePad.clear());
 
-    // --- 4. 核心 PDF 處理邏輯 ---
+    function textToPng(text, fontSize) {
+        const scale = 3;
+        const oc = document.createElement('canvas');
+        const ctx = oc.getContext('2d');
+        const fontStack = `${fontSize * scale}px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif`;
+        ctx.font = fontStack;
+        const tw = ctx.measureText(text).width;
+        oc.width  = tw + fontSize * scale;
+        oc.height = fontSize * scale * 1.6;
+        ctx.font = fontStack;
+        ctx.fillStyle = 'black';
+        ctx.textBaseline = 'top';
+        ctx.fillText(text, fontSize * scale * 0.2, fontSize * scale * 0.15);
+        return oc.toDataURL('image/png');
+    }
+
+    async function embedTextImage(pdfDoc, page, text, x, y, fontSize) {
+        if (!text || !text.trim()) return;
+        const img = await pdfDoc.embedPng(textToPng(text, fontSize));
+        const h = fontSize * 1.6;
+        page.drawImage(img, { x, y: y - fontSize * 0.5, width: (img.width / img.height) * h, height: h });
+    }
+
+    function createStampPng(size) {
+        const s = 3, w = size * s, h = size * 0.7 * s;
+        const oc = document.createElement('canvas');
+        oc.width = w; oc.height = h;
+        const ctx = oc.getContext('2d');
+        const color = '#0033cc';
+        ctx.strokeStyle = color; ctx.lineWidth = w * 0.025;
+        ctx.strokeRect(w * 0.04, h * 0.04, w * 0.92, h * 0.92);
+        ctx.lineWidth = w * 0.012;
+        ctx.strokeRect(w * 0.07, h * 0.07, w * 0.86, h * 0.86);
+        const fs = h * 0.22;
+        ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `bold ${fs}px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif`;
+        ['衛生福利部','彰化醫院','輻射防護會'].forEach((t, i) => ctx.fillText(t, w / 2, h * 0.25 + i * h * 0.28));
+        return oc.toDataURL('image/png');
+    }
+
+    function renderStampPreview() {
+        const pc = document.getElementById('stamp-preview');
+        const w = 180, h = 126;
+        pc.width = w; pc.height = h;
+        pc.style.border = '1px dashed #ccc';
+        const ctx = pc.getContext('2d');
+        const color = '#0033cc';
+        ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+        ctx.strokeRect(3, 3, w - 6, h - 6);
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(6, 6, w - 12, h - 12);
+        const fs = h * 0.22;
+        ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `bold ${fs}px "Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif`;
+        ['衛生福利部','彰化醫院','輻射防護會'].forEach((t, i) => ctx.fillText(t, w / 2, h * 0.25 + i * h * 0.28));
+    }
+
+    async function processPdfBytes(pdfBytesU8, originalName, role, signatureDataUrl, stampPng) {
+        const { PDFDocument } = PDFLib;
+        const pdfDoc = await PDFDocument.load(pdfBytesU8);
+        const firstPage = pdfDoc.getPages()[0];
+        const { width } = firstPage.getSize();
+
+        if (role !== 'stamp') {
+            const sigImg = await pdfDoc.embedPng(signatureDataUrl);
+            let signy = 90;
+            if (role === 'rso')  signy = 68;
+            if (role === 'boss') signy = 46;
+            firstPage.drawImage(sigImg, { x: 105, y: signy, width: 80, height: 30 });
+        }
+
+        if (role === 'rso') {
+            const doseRecord = document.getElementById('dose-record').value;
+            let checkX = 0;
+            if (doseRecord === 'yes') checkX = 380;
+            if (doseRecord === 'no')  checkX = 412;
+            if (doseRecord === 'na')  checkX = 445;
+            if (checkX > 0) await embedTextImage(pdfDoc, firstPage, '✓', checkX, 240, 14);
+        }
+
+        if (role === 'stamp') {
+            const sImg = await pdfDoc.embedPng(stampPng);
+            firstPage.drawImage(sImg, { x: width - 90 - 20, y: 20, width: 90, height: 63, opacity: 0.85 });
+        }
+
+        const saved = await pdfDoc.save();
+        const blob  = new Blob([saved], { type: 'application/pdf' });
+        const suffix = role === 'rso' ? '_輻防人員' : role === 'boss' ? '_主管' : '_核章';
+        const fileName   = `${originalName}${suffix}.pdf`;
+        const parts      = originalName.split('_');
+        const targetName = parts[1] || parts[0];
+        const dept       = parts[0] || '';
+
+        return { blob, fileName, targetName, dept };
+    }
+
+    // ✅ 上傳到 GAS（改用 fetch apiPost）
+    async function uploadToCloud(blob, fileName, targetName, role, dept) {
+        const base64 = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        });
+        const payload = {
+            base64Data: base64,
+            fileName, targetName, dept,
+            userData: {
+                name: targetName,
+                status: role === 'rso' ? '2' : role === 'boss' ? '3' : '4',
+                dept, empid: '', arrivalDate: ''
+            }
+        };
+        const res = await apiPost(payload);
+        if (res.result !== 'success') throw new Error(res.message || '上傳失敗');
+    }
+
+    async function processCloudFiles(role) {
+        const checked = Array.from(document.querySelectorAll('.cloud-file-cb:checked'));
+        if (checked.length === 0) return alert('請至少勾選一份待簽署檔案！');
+
+        isProcessing = true;
+        overlay.style.display = 'flex';
+
+        const signatureDataUrl = role !== 'stamp' ? signaturePad.toDataURL() : null;
+        const stampPng         = role === 'stamp'  ? createStampPng(90) : null;
+        const total = checked.length;
+
+        const progressWrapper = document.getElementById('progress-wrapper');
+        const progressBar     = document.getElementById('progress-bar');
+        const progressText    = document.getElementById('progress-text');
+        const resultList      = document.getElementById('result-list');
+        progressWrapper.style.display = 'block';
+        resultList.style.display      = 'block';
+        resultList.innerHTML          = '';
+        progressBar.style.width       = '0%';
+
+        let successCount = 0, failCount = 0;
+
+        for (let i = 0; i < total; i++) {
+            const cb           = checked[i];
+            const fileId       = cb.value;
+            const origFileName = cb.dataset.name;
+            const originalName = origFileName.replace(/\.pdf$/i, '');
+
+            document.getElementById('overlay-progress').innerText = `處理中 ${i + 1} / ${total}：${origFileName}`;
+            progressText.innerText = `處理中 ${i + 1} / ${total}`;
+
+            try {
+                // ✅ 從 GAS API 抓取檔案
+                const data = await apiGet({ action: 'getFile', fileId: fileId });
+                if (data.result !== 'success') throw new Error(data.message);
+
+                const pdfBytesU8 = Uint8Array.from(atob(data.base64), c => c.charCodeAt(0));
+                const { blob, fileName, targetName, dept } =
+                    await processPdfBytes(pdfBytesU8, originalName, role, signatureDataUrl, stampPng);
+
+                await uploadToCloud(blob, fileName, targetName, role, dept);
+
+                const link = document.createElement('a');
+                link.href     = URL.createObjectURL(blob);
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                successCount++;
+                const row = document.createElement('div');
+                row.className = 'ok';
+                row.innerText = `✅ ${fileName}`;
+                resultList.appendChild(row);
+
+            } catch (err) {
+                failCount++;
+                const row = document.createElement('div');
+                row.className = 'err';
+                row.innerText = `❌ ${origFileName}：${err.message}`;
+                resultList.appendChild(row);
+            }
+
+            progressBar.style.width = `${Math.round((i + 1) / total * 100)}%`;
+            progressText.innerText  = `已完成 ${i + 1} / ${total}`;
+            await new Promise(r => setTimeout(r, 600));
+        }
+
+        isProcessing = false;
+        overlay.style.display = 'none';
+        document.getElementById('loading-status').innerText = `✅ 批次完成：成功 ${successCount} 份，失敗 ${failCount} 份`;
+        document.getElementById('loading-status').style.color = failCount > 0 ? '#d9534f' : 'green';
+        alert(`批次處理完成！\n✅ 成功：${successCount} 份\n${failCount > 0 ? '❌ 失敗：' + failCount + ' 份，請查看清單' : ''}`);
+        loadCloudFileList(role);
+    }
+
     document.getElementById('save').addEventListener('click', async () => {
-        
         const role = document.getElementById('user-role').value;
-        const fileInput = document.getElementById('pdf-upload');
-        
-        if (fileInput.files.length === 0) return alert("請上傳 PDF 檔案！");
-        if (signaturePad.isEmpty()) return alert("請完成手寫簽名。");
 
         if (role === 'user') {
-            const dept = document.getElementById('input-dept').value;
-            const title = document.getElementById('input-title').value.trim();
-            const name = document.getElementById('input-name').value.trim();
-            const empid = document.getElementById('input-empid').value.trim();
-            const arrival = document.getElementById('input-arrival').value;
-
-            if (!dept) return alert("請選擇【單位名稱】！");
-            if (!title) return alert("請輸入【職稱】！");
-            if (!name) return alert("請輸入【姓名】！");
-            if (!empid) return alert("請輸入【員工編號】！");
-            if (!arrival) return alert("請選擇【到職日期】！");
+            if (!document.getElementById('read-confirm').checked)
+                return alert('請先向下滾動閱讀說明內容，並勾選「我已閱讀」確認框！');
+            if (!blankPdfBase64)
+                return alert('空白表單尚未載入完成，請稍候再試。');
+            await processUserRole();
+            return;
         }
 
-        const file = fileInput.files[0];
-        const existingPdfBytes = await file.arrayBuffer();
+        if (role !== 'stamp' && signaturePad.isEmpty()) return alert('請手寫簽名。');
+        await processCloudFiles(role);
+    });
+
+    async function processUserRole() {
+        const name    = document.getElementById('input-name').value.trim();
+        const dept    = document.getElementById('input-dept').value;
+        const empid   = document.getElementById('input-empid').value.trim();
+        const arrival = document.getElementById('input-arrival').value;
+        const title   = document.getElementById('input-title').value.trim();
+
+        if (!name || !dept || !empid || !arrival || !title) return alert('請填寫所有必要欄位。');
+        if (signaturePad.isEmpty()) return alert('請手寫簽名。');
+
+        isProcessing = true;
+        overlay.style.display = 'flex';
+        document.getElementById('overlay-progress').innerText = '';
+        document.getElementById('loading-status').innerText = '⚙️ 正在處理...';
+        document.getElementById('loading-status').style.color = '#d9534f';
 
         try {
-            const { PDFDocument, StandardFonts } = PDFLib;
-            const pdfDoc = await PDFDocument.load(existingPdfBytes);
-            const pages = pdfDoc.getPages();
-            const firstPage = pages[0];
-            const signatureImage = await pdfDoc.embedPng(signaturePad.toDataURL('image/png'));
-            
-            if (role === 'user') {
-                pdfDoc.registerFontkit(fontkit);
-                const chineseFont = await pdfDoc.embedFont(customFont, { subset: true });
-                const textSettings = { size: 12, font: chineseFont };
-                const name = document.getElementById('input-name').value.trim();
-                const empid = document.getElementById('input-empid').value.trim();
-                
-                firstPage.drawText(document.getElementById('input-dept').value, { x: 468, y: 810, ...textSettings });
-                firstPage.drawText(document.getElementById('input-title').value, { x: 468, y: 795, ...textSettings });
-                firstPage.drawText(name, { x: 468, y: 780, ...textSettings });
-                firstPage.drawText(empid, { x: 310, y: 100, ...textSettings });
-                
-                const arrivalDate = new Date(document.getElementById('input-arrival').value);
-                const dStr = `${arrivalDate.getFullYear()-1911}      ${arrivalDate.getMonth()+1}      ${arrivalDate.getDate()}`;
-                firstPage.drawText(dStr, { x: 485, y: 765, size: 11, font: chineseFont });
+            const { PDFDocument } = PDFLib;
+            const pdfBytes  = Uint8Array.from(atob(blankPdfBase64), c => c.charCodeAt(0));
+            const pdfDoc    = await PDFDocument.load(pdfBytes);
+            const firstPage = pdfDoc.getPages()[0];
 
-                const evalType = document.getElementById('eval-type').value;
-                let evalX = 255; if (evalType === 'new') evalX = 330; if (evalType === 'transfer') evalX = 380;
-                firstPage.drawText('V', { x: evalX, y: 765, size: 14, font: chineseFont });
+            await embedTextImage(pdfDoc, firstPage, dept,  468, 810, 12);
+            await embedTextImage(pdfDoc, firstPage, title, 468, 795, 12);
+            await embedTextImage(pdfDoc, firstPage, name,  468, 780, 12);
+            await embedTextImage(pdfDoc, firstPage, empid, 310, 97,  12);
 
-                const agreeType = document.getElementById('agree-type').value;
-                let agreey = 140; if (agreeType === 'disagree') agreey = 165; 
-                firstPage.drawText('V', { x: 45, y: agreey, size: 14, font: chineseFont });
+            const arrivalDate = new Date(arrival);
+            await embedTextImage(pdfDoc, firstPage,
+                `${arrivalDate.getFullYear()-1911}       ${arrivalDate.getMonth()+1}        ${arrivalDate.getDate()}`,
+                480, 767, 11);
 
-                const now = new Date();
-                const dateStr = `${now.getFullYear()-1911}                         ${now.getMonth()+1}                       ${now.getDate()}`;
-                firstPage.drawText(dateStr, { x: 130, y: 40, size: 15, font: chineseFont });
-            } 
-            
-            if (role === 'rso') {
-                const doseRecord = document.getElementById('dose-record').value;
-                const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                let checkX = 0;
-                if (doseRecord === 'yes') checkX = 380;
-                if (doseRecord === 'no') checkX = 412;
-                if (doseRecord === 'na') checkX = 445;
-                if (checkX > 0) {
-                    firstPage.drawText('V', { x: checkX, y: 240, size: 14, font: helveticaFont });
-                }
-            }
+            const evalType = document.getElementById('eval-type').value;
+            let evalX = 252;
+            if (evalType === 'new')      evalX = 330;
+            if (evalType === 'transfer') evalX = 380;
+            await embedTextImage(pdfDoc, firstPage, '✓', evalX, 765, 14);
 
-            let signy = 90; 
-            if (role === 'rso') signy = 68;
-            if (role === 'boss') signy = 46;
-            firstPage.drawImage(signatureImage, { x: 105, y: signy, width: 80, height: 30 });
+            await embedTextImage(pdfDoc, firstPage, '✓', 42,
+                document.getElementById('agree-type').value === 'disagree' ? 165 : 137, 14);
 
-            const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-            
-            let fileName = "";
-            const originalName = file.name.replace(".pdf", "").replace(".PDF", "");
+            const now = new Date();
+            await embedTextImage(pdfDoc, firstPage,
+                `${now.getFullYear()-1911}                        ${now.getMonth()+1}                  ${now.getDate()}`,
+                130, 40, 15);
 
-            if (role === 'user') {
-                const checkName = document.getElementById('input-name').value.trim();
-                fileName = checkName ? `${checkName}_輻防評估表.pdf` : `${originalName}_已簽署.pdf`;
-            } else if (role === 'rso') {
-                fileName = `${originalName}_輻防人員.pdf`;
-            } else if (role === 'boss') {
-                fileName = `${originalName}_主管.pdf`;
-            }
+            const sigImg = await pdfDoc.embedPng(signaturePad.toDataURL());
+            firstPage.drawImage(sigImg, { x: 105, y: 90, width: 80, height: 30 });
+
+            const saved    = await pdfDoc.save();
+            const blob     = new Blob([saved], { type: 'application/pdf' });
+            const fileName = `${dept}_${name}_輻防表.pdf`;
+
+            // ✅ 上傳到 GAS（用 fetch apiPost）
+            const base64 = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            });
+
+            const res = await apiPost({
+                base64Data: base64,
+                fileName, targetName: name, dept,
+                userData: { name, status: '1', dept, empid, arrivalDate: arrival }
+            });
+
+            if (res.result !== 'success') throw new Error(res.message || '雲端同步失敗');
 
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
+            link.href     = URL.createObjectURL(blob);
             link.download = fileName;
-            link.click(); 
-            
-            if (role === 'user') {
-                const statusConfirm = confirm("PDF 已下載！是否同步上傳並寄送紀錄？");
-                if (statusConfirm) {
-                    const scriptUrl = "https://script.google.com/macros/s/AKfycbyh0kUJ9lSvQKYKzzqJsYBtw1hKj328I4Us382yWpCucNvSwsg1E1JDvwa_RSvy2JvCUQ/exec"; 
-                    document.getElementById('loading-status').innerText = "🚀 正在連線至 Google 雲端...";
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob); 
-                    reader.onloadend = function() {
-                        const base64String = reader.result.split(',')[1];
-                        const payload = {
-                            base64Data: base64String,
-                            fileName: fileName,
-                            userName: document.getElementById('input-name').value.trim(),
-                            userData: {
-                                name: document.getElementById('input-name').value.trim(),
-                                dept: document.getElementById('input-dept').value,
-                                empid: document.getElementById('input-empid').value,
-                                arrivalDate: document.getElementById('input-arrival').value
-                            }
-                        };
-                        fetch(scriptUrl, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
-                        .then(() => {
-                            alert("資料已發送至雲端儲存。");
-                            document.getElementById('loading-status').innerText = "✅ 雲端同步完成";
-                        })
-                        .catch(err => alert("連線錯誤: " + err));
-                    };
-                }
-            }
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            isProcessing = false;
+            overlay.style.display = 'none';
+            document.getElementById('loading-status').innerText = '✅ 全部完成';
+            document.getElementById('loading-status').style.color = 'green';
+            alert('✅ 雲端上傳成功，並已開始下載！\n檔名：' + fileName);
+
         } catch (err) {
-            console.error(err);
-            alert("系統處理失敗：" + err.message);
+            isProcessing = false;
+            overlay.style.display = 'none';
+            document.getElementById('loading-status').innerText = '❌ 失敗：' + err.message;
+            alert('發生錯誤：' + err.message);
         }
-    });
+    }
 </script>
 </body>
 </html>
