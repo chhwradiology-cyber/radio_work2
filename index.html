@@ -575,12 +575,12 @@
                 const { blob, fileName, targetName, dept } =
                     await processPdfBytes(pdfBytesU8, originalName, role, signatureDataUrl, stampPng);
                 await uploadToCloud(blob, fileName, targetName, role, dept);
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+              //  const link = document.createElement('a');
+              //  link.href = URL.createObjectURL(blob);
+              //  link.download = fileName;
+              //  document.body.appendChild(link);
+              //  link.click();
+              //  document.body.removeChild(link);
                 successCount++;
                 const row = document.createElement('div');
                 row.className = 'ok';
@@ -650,8 +650,8 @@
 
             const arrivalDate = new Date(arrival);
             await embedTextImage(pdfDoc, firstPage,
-                `${arrivalDate.getFullYear()-1911}      ${arrivalDate.getMonth()+1}     ${arrivalDate.getDate()}`,
-                480, 767, 11);
+                `${arrivalDate.getFullYear()-1911}       ${arrivalDate.getMonth()+1}     ${arrivalDate.getDate()}`,
+                480, 767, 10);
 
             const evalType = document.getElementById('eval-type').value;
             let evalX = 252;
@@ -686,18 +686,18 @@
 
             if (res.result !== 'success') throw new Error(res.message || '雲端同步失敗');
 
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+          //  const link = document.createElement('a');
+          //  link.href = URL.createObjectURL(blob);
+          //  link.download = fileName;
+          //  document.body.appendChild(link);
+          //  link.click();
+          //  document.body.removeChild(link);
 
             isProcessing = false;
             overlay.style.display = 'none';
             document.getElementById('loading-status').innerText = '✅ 全部完成';
             document.getElementById('loading-status').style.color = 'green';
-            alert('✅ 雲端上傳成功，並已開始下載！\n檔名：' + fileName);
+            alert('✅ 雲端上傳成功！\n檔名：' + fileName);
 
         } catch (err) {
             isProcessing = false;
