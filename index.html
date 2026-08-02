@@ -9,17 +9,14 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif; 
-            line-height: 1.6; padding: 15px; max-width: 600px; margin: auto; background-color: #f4f7f6; 
-            touch-action: manipulation;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif; line-height: 1.6; padding: 15px; max-width: 600px; margin: auto; background-color: #f4f7f6; touch-action: manipulation; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h2 { font-size: 1.3rem; margin-bottom: 5px; text-align:center; color:#0056b3; }
         h3 { border-left: 5px solid #007bff; padding-left: 10px; margin-top: 20px; font-size: 1.1rem; }
         .signature-wrapper { position: relative; width: 100%; height: 180px; border: 1px solid #000; background-color: #fff; margin-top: 5px; touch-action: none; }
         #signature-pad { width: 100%; height: 100%; display: block; }
         .controls { margin-top: 15px; display: flex; gap: 10px; }
+        .controls-bottom { margin-top: 10px; display: flex; gap: 10px; }
         button { flex: 1; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         #save { background-color: #28a745; color: white; }
@@ -60,6 +57,7 @@
         .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         #overlay-progress { font-size: 15px; margin-top: 12px; color: #ffc107; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #btn-change-pwd { width: 100%; margin-top: 10px; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -72,12 +70,9 @@
 </div>
 
 <div class="card">
-  <div class="container">
-  <div style="text-align:center; margin-bottom:12px;">
-    <img src="https://lh3.googleusercontent.com/d/1rI42faHfacjBNoA3-mAAb7VMh5WfDH7a" 
-         alt="彰化醫院LOGO" 
-         style="max-width:150px; height:auto;">
-  </div>
+    <div style="text-align:center; margin-bottom:12px;">
+        <img src="https://lh3.googleusercontent.com/d/1rI42faHfacjBNoA3-mAAb7VMh5WfDH7a" alt="彰化醫院LOGO" style="max-width:150px; height:auto;">
+    </div>
     <h2>衛生福利部彰化醫院</h2>
     <h2>輻射工作人員評估認定表簽署系統</h2>
     <div id="loading-status" class="status-msg">⏳ 系統載入中，請稍候...</div>
@@ -123,6 +118,8 @@
                 <canvas id="stamp-preview"></canvas>
             </div>
             <p style="font-size:13px; color:#666; margin-top:8px;">※ 核章將蓋於 PDF 右下角，不需要手寫簽名。</p>
+            <!-- ✅ 修改密碼按鈕 -->
+            <button id="btn-change-pwd" onclick="changePassword()">🔑 修改核章密碼</button>
         </div>
     </div>
 
@@ -213,36 +210,36 @@
         <div id="progress-text"></div>
     </div>
     <div id="result-list"></div>
-    
+
+    <!-- 按鈕區：清除重簽 + 查看簽署表 -->
     <div class="controls">
         <button id="clear">清除重簽</button>
-        <a href="https://drive.google.com/drive/folders/1PVj7NQYYZZWEQFdI8K9dlvpv9bW9k7Ok" 
-          target="_blank" 
-          style="flex:1; padding:12px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:16px; background-color:#0056b3; color:white; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">
-           查看簽署表
-       </a>
+        <a href="https://drive.google.com/drive/folders/1PVj7NQYYZZWEQFdI8K9dlvpv9bW9k7Ok"
+           target="_blank"
+           style="flex:1; padding:12px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:16px; background-color:#0056b3; color:white; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">
+            查看簽署表
+        </a>
     </div>
-    <div class="controls" style="margin-top:10px;">
+    <!-- 確定簽署按鈕獨立一行 -->
+    <div class="controls-bottom">
         <button id="save">確定簽署</button>
     </div>
 </div>
 
 <script>
-    // ✅ GAS API 網址（唯一需要修改的設定）
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzu00GR8C22DVMSFDHrfcDdZ0FwrC8srVyFUN_GICE89s0a177VO2Out3r09zcWgUIf6A/exec';
 
-    // ✅ 統一的 API 呼叫函式
     async function apiGet(params) {
         const url = GAS_URL + '?' + new URLSearchParams(params).toString();
-        const res  = await fetch(url);
+        const res = await fetch(url);
         return await res.json();
     }
 
     async function apiPost(payload) {
         const res = await fetch(GAS_URL, {
-            method:  'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body:    JSON.stringify(payload)
+            body: JSON.stringify(payload)
         });
         return await res.json();
     }
@@ -269,7 +266,7 @@
     canvas.addEventListener('touchmove',  e => e.preventDefault(), { passive: false });
     canvas.addEventListener('touchend',   e => e.preventDefault(), { passive: false });
 
-    // ✅ 頁面載入：從 GAS API 抓空白 PDF
+    // 頁面載入：抓空白 PDF
     (async () => {
         try {
             const data = await apiGet({ action: 'getBlankPdf' });
@@ -279,9 +276,7 @@
                 document.getElementById('loading-status').style.color = 'green';
                 document.getElementById('user-role').disabled = false;
                 toggleFields();
-            } else {
-                throw new Error(data.message);
-            }
+            } else throw new Error(data.message);
         } catch (err) {
             document.getElementById('loading-status').innerText = '❌ 表單載入失敗，請重新整理頁面';
             document.getElementById('loading-status').style.color = '#d9534f';
@@ -295,20 +290,50 @@
         }
     });
 
-    // ✅ 載入雲端待簽檔案清單
+    // ✅ 核章密碼驗證（向後端確認，不在前端存密碼）
+    async function verifyStampPassword() {
+        const pwd = prompt('請輸入輻防會核章密碼：');
+        if (!pwd) return false;
+        try {
+            const data = await apiGet({ action: 'verifyPwd', pwd: pwd });
+            return data.result === 'success' && data.ok === true;
+        } catch (e) {
+            alert('驗證失敗，請確認網路連線。');
+            return false;
+        }
+    }
+
+    // ✅ 修改密碼
+    async function changePassword() {
+        const oldPwd = prompt('請輸入目前密碼：');
+        if (!oldPwd) return;
+        const newPwd = prompt('請輸入新密碼：');
+        if (!newPwd) return;
+        const confirm = prompt('請再輸入一次新密碼確認：');
+        if (newPwd !== confirm) return alert('❌ 兩次密碼不一致，請重新操作。');
+        try {
+            const data = await apiGet({ action: 'changePwd', oldPwd, newPwd });
+            if (data.result === 'success' && data.ok) {
+                alert('✅ 密碼已成功更新！');
+            } else {
+                alert('❌ 目前密碼錯誤，修改失敗。');
+            }
+        } catch (e) {
+            alert('修改失敗，請確認網路連線。');
+        }
+    }
+
     async function loadCloudFileList(role) {
         const listEl = document.getElementById('cloud-file-list');
         listEl.innerHTML = '<div class="cloud-file-empty">⏳ 載入中...</div>';
         try {
             let data;
-            if (role === 'rso') {
-                data = await apiGet({ action: 'listForRso' });
-            } else if (role === 'stamp') {
-                data = await apiGet({ action: 'listForStamp' });
-            } else if (role === 'boss') {
+            if (role === 'rso')        data = await apiGet({ action: 'listForRso' });
+            else if (role === 'stamp') data = await apiGet({ action: 'listForStamp' });
+            else if (role === 'boss') {
                 const dept = document.getElementById('boss-dept').value;
                 if (!dept) { listEl.innerHTML = '<div class="cloud-file-empty">請先選擇單位</div>'; return; }
-                data = await apiGet({ action: 'listForBoss', dept: dept });
+                data = await apiGet({ action: 'listForBoss', dept });
             }
             renderCloudFileList(data.files || []);
         } catch (err) {
@@ -343,15 +368,16 @@
         document.querySelectorAll('.cloud-file-cb').forEach(cb => cb.checked = checked);
     }
 
-    function toggleFields() {
+    // ✅ UI 切換（核章改為非同步，需 await 密碼驗證）
+    async function toggleFields() {
         const role = document.getElementById('user-role').value;
 
         if (role === 'stamp') {
-            const pwd = prompt('請輸入輻防會核章密碼：');
-            if (pwd !== 'C004846') {
+            const ok = await verifyStampPassword();
+            if (!ok) {
                 alert('密碼錯誤，已返回預設身分。');
                 document.getElementById('user-role').value = 'user';
-                toggleFields();
+                await toggleFields();
                 return;
             }
         }
@@ -491,27 +517,23 @@
         const parts      = originalName.split('_');
         const targetName = parts[1] || parts[0];
         const dept       = parts[0] || '';
-
         return { blob, fileName, targetName, dept };
     }
 
-    // ✅ 上傳到 GAS（改用 fetch apiPost）
     async function uploadToCloud(blob, fileName, targetName, role, dept) {
         const base64 = await new Promise(resolve => {
             const reader = new FileReader();
             reader.readAsDataURL(blob);
             reader.onloadend = () => resolve(reader.result.split(',')[1]);
         });
-        const payload = {
-            base64Data: base64,
-            fileName, targetName, dept,
+        const res = await apiPost({
+            base64Data: base64, fileName, targetName, dept,
             userData: {
                 name: targetName,
                 status: role === 'rso' ? '2' : role === 'boss' ? '3' : '4',
                 dept, empid: '', arrivalDate: ''
             }
-        };
-        const res = await apiPost(payload);
+        });
         if (res.result !== 'success') throw new Error(res.message || '上傳失敗');
     }
 
@@ -547,29 +569,23 @@
             progressText.innerText = `處理中 ${i + 1} / ${total}`;
 
             try {
-                // ✅ 從 GAS API 抓取檔案
-                const data = await apiGet({ action: 'getFile', fileId: fileId });
+                const data = await apiGet({ action: 'getFile', fileId });
                 if (data.result !== 'success') throw new Error(data.message);
-
                 const pdfBytesU8 = Uint8Array.from(atob(data.base64), c => c.charCodeAt(0));
                 const { blob, fileName, targetName, dept } =
                     await processPdfBytes(pdfBytesU8, originalName, role, signatureDataUrl, stampPng);
-
                 await uploadToCloud(blob, fileName, targetName, role, dept);
-
                 const link = document.createElement('a');
-                link.href     = URL.createObjectURL(blob);
+                link.href = URL.createObjectURL(blob);
                 link.download = fileName;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
                 successCount++;
                 const row = document.createElement('div');
                 row.className = 'ok';
                 row.innerText = `✅ ${fileName}`;
                 resultList.appendChild(row);
-
             } catch (err) {
                 failCount++;
                 const row = document.createElement('div');
@@ -593,7 +609,6 @@
 
     document.getElementById('save').addEventListener('click', async () => {
         const role = document.getElementById('user-role').value;
-
         if (role === 'user') {
             if (!document.getElementById('read-confirm').checked)
                 return alert('請先向下滾動閱讀說明內容，並勾選「我已閱讀」確認框！');
@@ -602,7 +617,6 @@
             await processUserRole();
             return;
         }
-
         if (role !== 'stamp' && signaturePad.isEmpty()) return alert('請手寫簽名。');
         await processCloudFiles(role);
     });
@@ -644,7 +658,6 @@
             if (evalType === 'new')      evalX = 330;
             if (evalType === 'transfer') evalX = 380;
             await embedTextImage(pdfDoc, firstPage, '✓', evalX, 765, 14);
-
             await embedTextImage(pdfDoc, firstPage, '✓', 42,
                 document.getElementById('agree-type').value === 'disagree' ? 165 : 137, 14);
 
@@ -660,7 +673,6 @@
             const blob     = new Blob([saved], { type: 'application/pdf' });
             const fileName = `${dept}_${name}_輻防表.pdf`;
 
-            // ✅ 上傳到 GAS（用 fetch apiPost）
             const base64 = await new Promise(resolve => {
                 const reader = new FileReader();
                 reader.readAsDataURL(blob);
@@ -668,15 +680,14 @@
             });
 
             const res = await apiPost({
-                base64Data: base64,
-                fileName, targetName: name, dept,
+                base64Data: base64, fileName, targetName: name, dept,
                 userData: { name, status: '1', dept, empid, arrivalDate: arrival }
             });
 
             if (res.result !== 'success') throw new Error(res.message || '雲端同步失敗');
 
             const link = document.createElement('a');
-            link.href     = URL.createObjectURL(blob);
+            link.href = URL.createObjectURL(blob);
             link.download = fileName;
             document.body.appendChild(link);
             link.click();
