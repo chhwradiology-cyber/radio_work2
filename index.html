@@ -343,7 +343,23 @@
                 if (!dept) { listEl.innerHTML = '<div class="cloud-file-empty">請先選擇單位</div>'; return; }
                 data = await apiGet({ action: 'listForBoss', dept });
             }
-            renderCloudFileList(data.files || []);
+
+            let files = data.files || [];
+
+            // 🌟【關鍵修改】：當角色為「輻防會核章」時，做三道關卡完整度的嚴格過濾
+            if (role === 'stamp') {
+                files = files.filter(f => {
+                    const name = f.name || '';
+                    const hasForm   = name.includes('輻防表');   // 1. 填寫表單
+                    const hasRso    = name.includes('輻防人員'); // 2. 輻防人員簽署
+                    const hasBoss   = name.includes('主管');     // 3. 主管簽署
+                    const notStamped = !name.includes('核章');   // 4. 尚未核章
+
+                    return hasForm && hasRso && hasBoss && notStamped;
+                });
+            }
+
+            renderCloudFileList(files);
         } catch (err) {
             listEl.innerHTML = '<div class="cloud-file-empty">❌ 載入失敗：' + err.message + '</div>';
         }
