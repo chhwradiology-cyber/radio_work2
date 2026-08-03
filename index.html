@@ -177,7 +177,15 @@
                 <option value="醫療科">醫療科</option>
             </select>
             <label>● 職稱：</label>
-            <input type="text" id="input-title" placeholder="例如：醫事放射師">
+            <select id="input-title">
+                <option value="">請選擇職稱...</option>
+                <option value="醫事放射師">醫事放射師</option>
+                <option value="護理師">護理師</option>
+                <option value="麻醉護理師">麻醉護理師</option>
+                <option value="醫師">醫師</option>
+                <option value="麻醉醫師">麻醉醫師</option>
+                <option value="技術員">技術員</option>
+            </select>
             <label>● 姓名：</label>
             <input type="text" id="input-name" placeholder="請輸入全名">
             <label>● 員工編號：</label>
@@ -649,9 +657,10 @@
             await embedTextImage(pdfDoc, firstPage, empid, 310, 97,  12);
 
             const arrivalDate = new Date(arrival);
-            await embedTextImage(pdfDoc, firstPage,
-                `${arrivalDate.getFullYear()-1911}       ${arrivalDate.getMonth()+1}     ${arrivalDate.getDate()}`,
-                480, 767, 10);
+            //await embedTextImage(pdfDoc, firstPage,
+            await embedTextImage(pdfDoc, firstPage, String(arrivalDate.getFullYear()-1911), 481, 767, 10);
+            await embedTextImage(pdfDoc, firstPage, String(arrivalDate.getMonth()+1),       512, 767, 10);
+            await embedTextImage(pdfDoc, firstPage, String(arrivalDate.getDate()),          537, 767, 10);
 
             const evalType = document.getElementById('eval-type').value;
             let evalX = 252;
@@ -662,9 +671,9 @@
                 document.getElementById('agree-type').value === 'disagree' ? 165 : 137, 14);
 
             const now = new Date();
-            await embedTextImage(pdfDoc, firstPage,
-                `${now.getFullYear()-1911}                        ${now.getMonth()+1}                  ${now.getDate()}`,
-                130, 38, 15);
+            await embedTextImage(pdfDoc, firstPage, String(now.getFullYear()-1911), 130, 38, 15);
+            await embedTextImage(pdfDoc, firstPage, String(now.getMonth()+1),       230, 38, 15);
+            await embedTextImage(pdfDoc, firstPage, String(now.getDate()),          315, 38, 15);
 
             const sigImg = await pdfDoc.embedPng(signaturePad.toDataURL());
             firstPage.drawImage(sigImg, { x: 105, y: 90, width: 80, height: 30 });
