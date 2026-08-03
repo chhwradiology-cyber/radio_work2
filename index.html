@@ -491,42 +491,56 @@
     }
 
     async function processPdfBytes(pdfBytesU8, originalName, role, signatureDataUrl, stampPng) {
-        const { PDFDocument } = PDFLib;
-        const pdfDoc = await PDFDocument.load(pdfBytesU8);
-        const firstPage = pdfDoc.getPages()[0];
-        const { width } = firstPage.getSize();
+    const { PDFDocument } = PDFLib;
+    const pdfDoc = await PDFDocument.load(pdfBytesU8);
+    const firstPage = pdfDoc.getPages()[0];
+    const { width } = firstPage.getSize();
 
-        if (role !== 'stamp') {
-            const sigImg = await pdfDoc.embedPng(signatureDataUrl);
-            let signy = 90;
-            if (role === 'rso')  signy = 68;
-            if (role === 'boss') signy = 46;
-            firstPage.drawImage(sigImg, { x: 105, y: signy, width: 80, height: 30 });
+    if (role !== 'stamp') {
+        const sigImg = await pdfDoc.embedPng(signatureDataUrl);
+        let signy = 90;
+        if (role === 'rso')  signy = 68;
+        if (role === 'boss') signy = 46;
+        
+        // 1. 繪製手寫簽名 (x: 105, width: 80)
+        firstPage.drawImage(sigImg, { x: 105, y: signy, width: 80, height: 30 });
+
+        // 2. 🌟 【新增】若為主管簽署，於簽名右側印上民國日期
+        if (role === 'boss') {
+            const now = new Date();
+            const year = now.getFullYear() - 1911; // 轉民國年
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const dateStr = `${year}.${month}.${day}`; // 日期格式（可自行改為 '/'）
+
+            // 簽名 x 是 105、寬度 80，因此日期從 x = 190 開始（簽名右側）
+            await embedTextImage(pdfDoc, firstPage, dateStr, 250, signy + 8, 10);
         }
-
-        if (role === 'rso') {
-            const doseRecord = document.getElementById('dose-record').value;
-            let checkX = 0;
-            if (doseRecord === 'yes') checkX = 380;
-            if (doseRecord === 'no')  checkX = 412;
-            if (doseRecord === 'na')  checkX = 445;
-            if (checkX > 0) await embedTextImage(pdfDoc, firstPage, '✓', checkX, 240, 14);
-        }
-
-        if (role === 'stamp') {
-            const sImg = await pdfDoc.embedPng(stampPng);
-            firstPage.drawImage(sImg, { x: width - 90 - 20, y: 20, width: 90, height: 63, opacity: 0.85 });
-        }
-
-        const saved = await pdfDoc.save();
-        const blob  = new Blob([saved], { type: 'application/pdf' });
-        const suffix = role === 'rso' ? '_輻防人員' : role === 'boss' ? '_主管' : '_核章';
-        const fileName   = `${originalName}${suffix}.pdf`;
-        const parts      = originalName.split('_');
-        const targetName = parts[1] || parts[0];
-        const dept       = parts[0] || '';
-        return { blob, fileName, targetName, dept };
     }
+
+    if (role === 'rso') {
+        const doseRecord = document.getElementById('dose-record').value;
+        let checkX = 0;
+        if (doseRecord === 'yes') checkX = 380;
+        if (doseRecord === 'no')  checkX = 412;
+        if (doseRecord === 'na')  checkX = 445;
+        if (checkX > 0) await embedTextImage(pdfDoc, firstPage, '✓', checkX, 240, 14);
+    }
+
+    if (role === 'stamp') {
+        const sImg = await pdfDoc.embedPng(stampPng);
+        firstPage.drawImage(sImg, { x: width - 90 - 20, y: 20, width: 90, height: 63, opacity: 0.85 });
+    }
+
+    const saved = await pdfDoc.save();
+    const blob  = new Blob([saved], { type: 'application/pdf' });
+    const suffix = role === 'rso' ? '_輻防人員' : role === 'boss' ? '_主管' : '_核章';
+    const fileName   = `${originalName}${suffix}.pdf`;
+    const parts      = originalName.split('_');
+    const targetName = parts[1] || parts[0];
+    const dept       = parts[0] || '';
+    return { blob, fileName, targetName, dept };
+}
 
     async function uploadToCloud(blob, fileName, targetName, role, dept) {
         const base64 = await new Promise(resolve => {
