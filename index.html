@@ -110,6 +110,9 @@
                 <option value="yes">是 (已提供)</option>
                 <option value="no">否</option>
             </select>
+            <label style="margin-top:8px;">● 備註說明（選填）：</label>
+            <textarea id="rso-remark" rows="3" placeholder="可在此輸入補充說明文字..."
+                style="width:100%; padding:10px; font-size:15px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; resize:vertical; font-family:inherit;"></textarea>
         </div>
 
         <div id="stamp-info-fields" class="hidden">
@@ -310,6 +313,19 @@
             return false;
         }
     }
+    
+    // ✅ 單位主管密碼驗證
+    async function verifyBossPassword() {
+        const pwd = prompt('請輸入單位主管密碼：');
+        if (!pwd) return false;
+        try {
+            const data = await apiGet({ action: 'verifyBossPwd', pwd: pwd });
+            return data.result === 'success' && data.ok === true;
+        } catch (e) {
+            alert('驗證失敗，請確認網路連線。');
+            return false;
+        }
+    }
 
     // ✅ 修改密碼
     async function changePassword() {
@@ -398,6 +414,16 @@
 
         if (role === 'stamp') {
             const ok = await verifyStampPassword();
+            if (!ok) {
+                alert('密碼錯誤，已返回預設身分。');
+                document.getElementById('user-role').value = 'user';
+                await toggleFields();
+                return;
+            }
+        }
+
+        if (role === 'boss') {
+            const ok = await verifyBossPassword();
             if (!ok) {
                 alert('密碼錯誤，已返回預設身分。');
                 document.getElementById('user-role').value = 'user';
@@ -519,7 +545,7 @@
         if (role === 'boss') signy = 46;
         
         // 1. 繪製手寫簽名 (x: 105, width: 80)
-        firstPage.drawImage(sigImg, { x: 105, y: signy, width: 80, height: 30 });
+        firstPage.drawImage(sigImg, { x: 105, y: signy, width: 80, height: 25 });
 
         // 2. 🌟 【新增】若為主管簽署，於簽名右側印上民國日期
         if (role === 'boss') {
@@ -541,6 +567,12 @@
         if (doseRecord === 'no')  checkX = 412;
         if (doseRecord === 'na')  checkX = 445;
         if (checkX > 0) await embedTextImage(pdfDoc, firstPage, '✓', checkX, 240, 14);
+
+        // ✅ 備註文字寫入 PDF（勾選欄位正下方）
+        const remark = document.getElementById('rso-remark').value.trim();
+        if (remark) {
+            await embedTextImage(pdfDoc, firstPage, remark, 445, 220, 6);
+        }
     }
 
     if (role === 'stamp') {
@@ -706,7 +738,7 @@
             await embedTextImage(pdfDoc, firstPage, String(now.getDate()),          315, 38, 15);
 
             const sigImg = await pdfDoc.embedPng(signaturePad.toDataURL());
-            firstPage.drawImage(sigImg, { x: 105, y: 90, width: 80, height: 30 });
+            firstPage.drawImage(sigImg, { x: 105, y: 90, width: 80, height: 25 });
 
             const saved    = await pdfDoc.save();
             const blob     = new Blob([saved], { type: 'application/pdf' });
